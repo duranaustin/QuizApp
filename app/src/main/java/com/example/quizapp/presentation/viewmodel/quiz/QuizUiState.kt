@@ -7,7 +7,7 @@ data class QuizUiState(
     val currentQuestionInt: Int,
     val currentQuestion: Question?,
     val currentAnswer: Answer?,
-    val questions: MutableMap<Int, Question>,
+    val questions: List<Question>,
     val answers: MutableMap<Int, Answer>
 ) {
     companion object {
@@ -15,13 +15,8 @@ data class QuizUiState(
             currentQuestionInt = 0,
             currentQuestion = null,
             currentAnswer = null,
-            questions = mutableMapOf(),
+            questions = listOf(),
             answers = mutableMapOf()
         )
     }
 }
-
-data class QuizActions(
-    val onNext: () -> Unit,
-    val onFinish: () -> Unit
-)

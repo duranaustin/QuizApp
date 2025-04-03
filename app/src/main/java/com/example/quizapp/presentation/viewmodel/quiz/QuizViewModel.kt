@@ -22,7 +22,6 @@ class QuizViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val quizQuestions = quizUseCases.getQuizQuestions()
-            val questionsMap = quizQuestions.associateBy { it.id }.toMutableMap()
             val answersMap = quizQuestions.associate { question ->
                 question.id to Answer(
                     questionId = question.id,
@@ -31,14 +30,14 @@ class QuizViewModel @Inject constructor(
                 )
             }.toMutableMap()
 
-            val firstQuestion = questionsMap.values.firstOrNull()
-            val firstAnswer = firstQuestion?.id?.let { answersMap[it] }
+            val firstQuestion = quizQuestions.firstOrNull()
+            val firstAnswer = firstQuestion?.let { answersMap[it.id] }
 
             _quizUiState.update {
                 it.copy(
-                    questions = questionsMap,
+                    questions = quizQuestions,
                     answers = answersMap,
-                    currentQuestionInt = firstQuestion?.id ?: 0,
+                    currentQuestionInt = 0,
                     currentQuestion = firstQuestion,
                     currentAnswer = firstAnswer
                 )
@@ -48,13 +47,18 @@ class QuizViewModel @Inject constructor(
 
     fun onNext() {
         _quizUiState.update { currentState ->
-            val nextQuestionInt = currentState.currentQuestionInt + 1
-            val nextQuestion = currentState.questions[nextQuestionInt]
-            val nextAnswer = nextQuestion?.id?.let { currentState.answers[it] }
+            val nextQuestionIndex = currentState.currentQuestionInt + 1
+            val nextQuestion = if (nextQuestionIndex < currentState.questions.size) {
+                currentState.questions[nextQuestionIndex]
+            } else {
+                null
+            }
+
+            val nextAnswer = nextQuestion?.let { currentState.answers[it.id] }
 
             if (nextQuestion != null) {
                 currentState.copy(
-                    currentQuestionInt = nextQuestionInt,
+                    currentQuestionInt = nextQuestionIndex,
                     currentQuestion = nextQuestion,
                     currentAnswer = nextAnswer
                 )
@@ -66,13 +70,18 @@ class QuizViewModel @Inject constructor(
 
     fun onBack() {
         _quizUiState.update { currentState ->
-            val prevQuestionInt = currentState.currentQuestionInt - 1
-            val prevQuestion = currentState.questions[prevQuestionInt]
-            val prevAnswer = prevQuestion?.id?.let { currentState.answers[it] }
+            val prevQuestionIndex = currentState.currentQuestionInt - 1
+            val prevQuestion = if (prevQuestionIndex >= 0) {
+                currentState.questions[prevQuestionIndex]
+            } else {
+                null
+            }
+
+            val prevAnswer = prevQuestion?.let { currentState.answers[it.id] }
 
             if (prevQuestion != null) {
                 currentState.copy(
-                    currentQuestionInt = prevQuestionInt,
+                    currentQuestionInt = prevQuestionIndex,
                     currentQuestion = prevQuestion,
                     currentAnswer = prevAnswer
                 )

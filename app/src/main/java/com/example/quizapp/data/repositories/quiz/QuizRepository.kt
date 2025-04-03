@@ -10,12 +10,12 @@ class QuizRepository @Inject constructor(): IQuizRepository {
     override suspend fun getQuizQuestions(): List<Question> {
         return listOf(
             Question(
-                1,
+                114,
                 "True or False: An Activity is destroyed during recomposition?",
                 QuestionType.TRUE_FALSE
             ),
             Question(
-                2,
+                543,
                 "What is the primary purpose of Jetpack Compose?",
                 QuestionType.MULTIPLE_CHOICE,
                 mutableMapOf(
@@ -26,12 +26,12 @@ class QuizRepository @Inject constructor(): IQuizRepository {
                 )
             ),
             Question(
-                3,
+                23,
                 "What does the acronym 'MVVM' stand for in Android development?",
                 QuestionType.SHORT_ANSWER
             ),
             Question(
-                4,
+                1,
                 question = "Which of the following are benefits of using Jetpack Compose?",
                 questionType = QuestionType.MULTIPLE_ANSWER,
                 options = mutableMapOf(
@@ -43,7 +43,7 @@ class QuizRepository @Inject constructor(): IQuizRepository {
                 )
             ),
             Question(
-                5,
+                333,
                 "Which of these are UI components in Jetpack Compose? (Select all that apply)",
                 QuestionType.MULTIPLE_ANSWER,
                 mutableMapOf(

@@ -1,11 +1,8 @@
 package com.example.quizapp.presentation.ui.quiz
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,12 +32,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,19 +52,40 @@ import com.example.quizapp.domain.models.Question
 import com.example.quizapp.domain.models.QuestionType
 import com.example.quizapp.presentation.viewmodel.quiz.QuizViewModel
 import com.example.quizapp.R
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizScreen() {
+    val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
     val quizViewModel = hiltViewModel<QuizViewModel>()
     val quizUiState by quizViewModel.quizUiState.collectAsStateWithLifecycle()
 
     val previousQuestionIndex = remember { mutableIntStateOf(quizUiState.currentQuestionInt) }
-    val isNext = quizUiState.currentQuestionInt > previousQuestionIndex.intValue
     previousQuestionIndex.intValue = quizUiState.currentQuestionInt
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    val pagerState = rememberPagerState(
+        initialPage = quizUiState.currentQuestionInt,
+        pageCount = { quizUiState.questions.size }
+    )
+
+    var previousPage by remember { mutableIntStateOf(pagerState.currentPage) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (previousPage != pagerState.currentPage) {
+            focusManager.clearFocus()
+            if (pagerState.currentPage > previousPage) {
+                quizViewModel.onNext()
+            } else {
+                quizViewModel.onBack()
+            }
+            previousPage = pagerState.currentPage
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -90,11 +114,17 @@ fun QuizScreen() {
                         modifier = Modifier.width(56.dp)
                     ) {
                         AnimatedVisibility(
-                            visible = quizUiState.currentQuestionInt > 1,
+                            visible = quizUiState.currentQuestionInt > 0,
                             enter = slideInHorizontally { fullWidth -> -fullWidth },
                             exit = slideOutHorizontally { fullWidth -> -fullWidth },
                         ) {
-                            IconButton(onClick = { quizViewModel.onBack() }) {
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                }
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back"
@@ -109,11 +139,17 @@ fun QuizScreen() {
                     ) {
                         Row {
                             AnimatedVisibility(
-                                visible = quizUiState.currentQuestionInt < quizUiState.questions.size,
+                                visible = quizUiState.currentQuestionInt < quizUiState.questions.size - 1,
                                 enter = slideInHorizontally { fullWidth -> fullWidth },
                                 exit = slideOutHorizontally { fullWidth -> fullWidth },
                             ) {
-                                IconButton(onClick = { quizViewModel.onNext() }) {
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                        }
+                                    }
+                                ) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowForward,
                                         contentDescription = "Next"
@@ -126,40 +162,25 @@ fun QuizScreen() {
             )
         }
     ) { padding ->
-        Box(
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
-                .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
-        ) {
-            AnimatedContent(
-                targetState = quizUiState.currentQuestion,
-                transitionSpec = {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> if (isNext) fullWidth else -fullWidth },
-                        animationSpec = tween(300)
-                    ) togetherWith slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> if (isNext) -fullWidth else fullWidth },
-                        animationSpec = tween(300)
+                .padding(horizontal = 16.dp),
+        ) { page ->
+            QuestionDisplay(
+                question = quizUiState.questions[page],
+                answer = quizUiState.currentAnswer,
+                onTrueOrFalse = { quizViewModel.onTrueOrFalse(it) },
+                onMultipleChoice = { id -> quizViewModel.onMultipleChoice(id) },
+                onMultipleAnswer = { id, result ->
+                    quizViewModel.onMultipleAnswer(
+                        id,
+                        result
                     )
-                }, label = "questionAnimation"
-            ) { question ->
-                question?.let {
-                    QuestionDisplay(
-                        question = it,
-                        answer = quizUiState.currentAnswer,
-                        onTrueOrFalse = { quizViewModel.onTrueOrFalse(it) },
-                        onMultipleChoice = { id -> quizViewModel.onMultipleChoice(id) },
-                        onMultipleAnswer = { id, result ->
-                            quizViewModel.onMultipleAnswer(
-                                id,
-                                result
-                            )
-                        },
-                        onShortAnswer = { quizViewModel.onShortAnswer(it) }
-                    )
-                }
-            }
+                },
+                onShortAnswer = { quizViewModel.onShortAnswer(it) }
+            )
         }
     }
 }
