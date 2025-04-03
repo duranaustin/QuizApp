@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,7 +57,7 @@ fun QuizScreen() {
     val quizViewModel = hiltViewModel<QuizViewModel>()
     val quizUiState by quizViewModel.quizUiState.collectAsStateWithLifecycle()
 
-    var previousQuestionIndex = remember { mutableIntStateOf(quizUiState.currentQuestionInt) }
+    val previousQuestionIndex = remember { mutableIntStateOf(quizUiState.currentQuestionInt) }
     val isNext = quizUiState.currentQuestionInt > previousQuestionIndex.intValue
     previousQuestionIndex.intValue = quizUiState.currentQuestionInt
 
@@ -242,7 +243,11 @@ fun MultipleChoiceQuestion(
     Column {
         options.forEach { (id, text) ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onAnswerSelected(id)
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -268,7 +273,11 @@ fun MultipleAnswerQuestion(
     Column {
         options.forEach { (id, text) ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onAnswerSelected(id, !(selectedAnswers[id] ?: false))
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(
